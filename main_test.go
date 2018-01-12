@@ -48,8 +48,8 @@ func BenchmarkFindAnchorsWithTokenizer(b *testing.B) {
 		fmt.Printf("Error: unable to parse response body: %+v, %v", err, t)
 		return
 	}
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		findAnchorsWithTokenizer(t)
-	}
+	// b.ResetTimer()
+	// for i := 0; i < b.N; i++ {
+	// 	findAnchorsWithTokenizer(t)
+	// }
 }

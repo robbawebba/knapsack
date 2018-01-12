@@ -27,8 +27,7 @@ func findAnchors(n *html.Node) int {
 	return anc
 }
 
-func findAnchorsWithTokenizer(t *html.Tokenizer) {
-	count := 0
+func findAnchorsWithTokenizer(t *html.Tokenizer, foundHeaders chan html.Token) {
 	for {
 		tt := t.Next()
 		switch tt {
@@ -36,9 +35,11 @@ func findAnchorsWithTokenizer(t *html.Tokenizer) {
 			return
 		case html.StartTagToken, html.EndTagToken:
 			tn := t.Token()
-			if tn.DataAtom == atom.A {
+			switch tn.DataAtom {
+			case atom.H1, atom.H2, atom.H3, atom.H4, atom.H6:
+
 				if tt == html.StartTagToken {
-					count++
+					foundHeaders <- tn
 				}
 			}
 		}
@@ -61,13 +62,20 @@ func main() {
 		return
 	}
 
-	doc, err := html.Parse(res.Body)
+	t := html.NewTokenizer(res.Body)
 	if err != nil {
-		fmt.Printf("Error: unable to parse response body: %+v, %v", err, doc)
+		fmt.Printf("Error: unable to parse response body: %+v, %v", err, t)
 		return
 	}
-	count := findAnchors(doc)
 
-	fmt.Printf(`count: %d`, count)
+	headers := make(chan html.Token)
+	findAnchorsWithTokenizer(t, headers)
+
+	for {
+		select {
+		case h := <-headers:
+			fmt.Printf("Found header %+v", h)
+		}
+	}
 
 }

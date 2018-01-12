@@ -27,19 +27,30 @@ func findAnchors(n *html.Node) int {
 	return anc
 }
 
-func findAnchorsWithTokenizer(t *html.Tokenizer, foundHeaders chan html.Token) {
+func findHeadersWithTokenizer(t *html.Tokenizer, foundHeaders chan []html.Token) {
 	for {
 		tt := t.Next()
 		switch tt {
 		case html.ErrorToken:
+			foundHeaders <- []html.Token{t.Token()}
 			return
-		case html.StartTagToken, html.EndTagToken:
+		case html.StartTagToken:
 			tn := t.Token()
 			switch tn.DataAtom {
-			case atom.H1, atom.H2, atom.H3, atom.H4, atom.H6:
-
+			case atom.H1, atom.H2, atom.H3, atom.H4, atom.H5, atom.H6:
 				if tt == html.StartTagToken {
-					foundHeaders <- tn
+					headerTree := []html.Token{tn}
+					// search for the rest of the tokens of this header node
+					for {
+						t.Next()
+						n := t.Token()
+						headerTree = append(headerTree, n)
+						if n.DataAtom == tn.DataAtom && n.Type == html.EndTagToken {
+							break
+						}
+					}
+					foundHeaders <- headerTree
+
 				}
 			}
 		}
@@ -68,13 +79,17 @@ func main() {
 		return
 	}
 
-	headers := make(chan html.Token)
-	findAnchorsWithTokenizer(t, headers)
+	headers := make(chan []html.Token)
+	go findHeadersWithTokenizer(t, headers)
 
+loop:
 	for {
 		select {
 		case h := <-headers:
-			fmt.Printf("Found header %+v", h)
+			if h[0].Type == html.ErrorToken {
+				break loop
+			}
+			fmt.Printf("Found header %+v\n", h)
 		}
 	}
 

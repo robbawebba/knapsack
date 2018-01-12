@@ -31,7 +31,7 @@ func BenchmarkFindAnchors(b *testing.B) {
 	}
 }
 
-func BenchmarkFindAnchorsWithTokenizer(b *testing.B) {
+func BenchmarkFindHeadersWithTokenizer(b *testing.B) {
 	res, err := http.Get("https://medium.freecodecamp.org/the-crazy-history-of-the-100daysofcode-challenge-and-why-you-should-try-it-for-2018-6c89a76e298d")
 	if err != nil {
 		fmt.Printf("Error requesting URL %s: %+v", url, err)
@@ -48,8 +48,19 @@ func BenchmarkFindAnchorsWithTokenizer(b *testing.B) {
 		fmt.Printf("Error: unable to parse response body: %+v, %v", err, t)
 		return
 	}
-	// b.ResetTimer()
-	// for i := 0; i < b.N; i++ {
-	// 	findAnchorsWithTokenizer(t)
-	// }
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		headers := make(chan []html.Token)
+		go findHeadersWithTokenizer(t, headers)
+	loop:
+		for {
+			select {
+			case h := <-headers:
+				if h[0].Type == html.ErrorToken {
+					break loop
+				}
+				fmt.Printf("Found header %+v\n", h)
+			}
+		}
+	}
 }

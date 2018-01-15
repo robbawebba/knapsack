@@ -3,17 +3,19 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"os"
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 )
 
-var url string
+var outPath string
 
 func init() {
-	flag.StringVar(&url, `url`, ``, `URL to save locally`)
-	flag.StringVar(&url, `u`, ``, `URL to save locally`)
+	flag.StringVar(&outPath, `out`, `nooooo`, `Save the HTML body of the response to a file`)
+	flag.StringVar(&outPath, `o`, `nooooo`, `Save the HTML body of the response to a file`)
 }
 
 func findAnchors(n *html.Node) int {
@@ -59,7 +61,10 @@ func findHeadersWithTokenizer(t *html.Tokenizer, foundHeaders chan []html.Token)
 
 func main() {
 	flag.Parse()
+	url := flag.Arg(0)
+
 	if url == `` {
+		fmt.Println(`NO URL`)
 		return
 	}
 	res, err := http.Get(url)
@@ -67,9 +72,28 @@ func main() {
 		fmt.Printf("Error requesting URL %s: %+v", url, err)
 		return
 	}
+
 	defer res.Body.Close()
-	if err != nil {
-		fmt.Printf("Error: unable to read response body: %+v", err)
+
+	if outPath != `` {
+		fmt.Println(outPath)
+		body, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			fmt.Printf("Error: unable to read response body: %+v", err)
+			return
+		}
+
+		file, err := os.Create(outPath)
+		if err != nil {
+			fmt.Printf("Error creating new file: %+v", err)
+			return
+		}
+		defer file.Close()
+		_, err = file.Write(body)
+		if err != nil {
+			fmt.Printf("Error while writing body to file: %+v", err)
+			return
+		}
 		return
 	}
 

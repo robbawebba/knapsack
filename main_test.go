@@ -11,7 +11,7 @@ import (
 func BenchmarkFindAnchors(b *testing.B) {
 	res, err := http.Get("https://medium.freecodecamp.org/the-crazy-history-of-the-100daysofcode-challenge-and-why-you-should-try-it-for-2018-6c89a76e298d")
 	if err != nil {
-		fmt.Printf("Error requesting URL %s: %+v", url, err)
+		fmt.Printf("Error requesting URL: %+v", err)
 		return
 	}
 	defer res.Body.Close()
@@ -34,7 +34,7 @@ func BenchmarkFindAnchors(b *testing.B) {
 func BenchmarkFindHeadersWithTokenizer(b *testing.B) {
 	res, err := http.Get("https://medium.freecodecamp.org/the-crazy-history-of-the-100daysofcode-challenge-and-why-you-should-try-it-for-2018-6c89a76e298d")
 	if err != nil {
-		fmt.Printf("Error requesting URL %s: %+v", url, err)
+		fmt.Printf("Error requesting URL: %+v", err)
 		return
 	}
 	defer res.Body.Close()

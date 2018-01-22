@@ -35,7 +35,11 @@ func (s *Scraper) ScrapeArticle(r io.Reader) error {
 	}
 	fmt.Println(" FOUND HEADERS")
 	for _, h := range headers {
-		fmt.Printf("%+v\n", h)
+		text, err := getInnerText(h)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("%v: %s\n", h.DataAtom, text)
 	}
 	return nil
 }
@@ -79,4 +83,13 @@ func findAll(root *html.Node, seekTags ...atom.Atom) []*html.Node {
 	}
 	traverse(root)
 	return foundNodes
+}
+
+func getInnerText(root *html.Node) (string, error) {
+	var child *html.Node
+	if child = root.FirstChild; child.Type != html.TextNode {
+		return "", errors.New("the provided token's first child is not text")
+	}
+
+	return child.Data, nil
 }

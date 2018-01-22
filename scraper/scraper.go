@@ -2,6 +2,7 @@ package scraper
 
 import (
 	"errors"
+	"fmt"
 	"io"
 
 	"golang.org/x/net/html"
@@ -19,18 +20,27 @@ func (s *Scraper) ScrapeArticle(r io.Reader) error {
 	}
 
 	//first find body and head
-	head := findNode(doc, atom.Head)
+	head := findFirst(doc, atom.Head)
 	if head == nil {
 		return errors.New("Could not find a head tag, perhaps this is invalid html")
 	}
-	body := findNode(doc, atom.Body)
+	body := findFirst(doc, atom.Body)
 	if body == nil {
 		return errors.New("Could not find a body tag, perhaps this is invalid html")
+	}
+
+	headers := findAll(doc, atom.H1, atom.H2, atom.H3, atom.H4, atom.H5)
+	if headers == nil {
+		return errors.New("Could not find any header tags")
+	}
+	fmt.Println(" FOUND HEADERS")
+	for _, h := range headers {
+		fmt.Printf("%+v\n", h)
 	}
 	return nil
 }
 
-func findNode(root *html.Node, seekTag atom.Atom) *html.Node {
+func findFirst(root *html.Node, seekTag atom.Atom) *html.Node {
 	var traverse func(*html.Node)
 	var foundNode *html.Node
 
@@ -40,7 +50,7 @@ func findNode(root *html.Node, seekTag atom.Atom) *html.Node {
 			return
 		}
 		if node.Type == html.DoctypeNode && root.NextSibling != nil {
-			findNode(root.NextSibling, seekTag)
+			// findNode(root.NextSibling, seekTag)
 		}
 		for c := node.FirstChild; c != nil; c = c.NextSibling {
 			traverse(c)
@@ -48,4 +58,25 @@ func findNode(root *html.Node, seekTag atom.Atom) *html.Node {
 	}
 	traverse(root)
 	return foundNode
+}
+
+func findAll(root *html.Node, seekTags ...atom.Atom) []*html.Node {
+	var traverse func(*html.Node)
+	var foundNodes []*html.Node
+
+	traverse = func(node *html.Node) {
+		for _, tag := range seekTags {
+			if node.Type == html.ElementNode && node.DataAtom == tag {
+				foundNodes = append(foundNodes, node)
+			}
+		}
+		if node.Type == html.DoctypeNode && root.NextSibling != nil {
+			// findNod(root.NextSibling, seekTag)
+		}
+		for c := node.FirstChild; c != nil; c = c.NextSibling {
+			traverse(c)
+		}
+	}
+	traverse(root)
+	return foundNodes
 }

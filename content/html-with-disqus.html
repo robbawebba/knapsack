@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+  <head>
+    <meta name="generator" content="Hugo 0.31.1" />
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to store 50000 mails in 10MB to fight Spammers &ndash; Carlo Strub</title>
+
+      <meta name="description" content="How to defend against junk mail in modern times">
+
+
+    <link rel="canonical" href="https://carlostrub.ch/code/security/sisyphus/">
+
+    
+    <link href="/css/critical-vendor.css" rel="stylesheet" type="text/css" />
+    <link href="/css/critical-custom.css" rel="stylesheet" type="text/css" />
+    <link href="/css/fira_code.css" rel="stylesheet" type="text/css" />
+    <link href="/css/custom.css" rel="stylesheet" type="text/css" />
+  </head>
+  <body class="hack dark main container">
+    <header>
+
+  <nav>
+
+
+      <a class="active" href="/code/">Code</a>
+
+      <a class="" href="/research/">Research</a>
+
+      <a class="" href="/about/">About</a>
+
+      <a class="" href="/">Home</a>
+
+  </nav>
+
+
+</header>
+    <main>
+  <h1>How to store 50000 mails in 10MB to fight Spammers</h1>
+  <p>For those who do not allow their mails being read by a large cloud provider,
+fighting <a href="https://en.wikipedia.org/wiki/Email_spam">junk mail</a> is an endless
+task. And, many people developed
+<a href="https://en.wikipedia.org/wiki/Anti-spam_techniques">various</a> &ndash; sometimes
+really clever &ndash; techniques to mitigate it. Though, current spam filters are
+typically time-consuming to configure, consume immense resources (or
+deliberatly do not use all available information), and are complex in
+maintenance.</p>
+
+<p>This text is about <a href="https://github.com/carlostrub/sisyphus">Sisyphus</a>, a novel
+filter that automatically learns all (!) your mails&rsquo; content to effectively
+fight off junk, is easy to deploy (one binary), and just needs one line of
+config, the location of your mail directory.
+</p>
+
+<h2 id="content-is-king">Content is King</h2>
+
+<p>All we really care about is our mails&rsquo; content!  In particular, we would like
+to separate mail we want to read from mail we do not want to read.  This is a
+tricky problem because such mails may indeed come from the same sender. For
+example, my favorite news site sends me lots of mails via newsletter. Some of
+those newsletters (even if marketing &ldquo;spam&rdquo;) are of interest to me, others just
+fill my mail box and remain unread forever.</p>
+
+<p>When doing &ldquo;manual&rdquo; junk mail filtering by eye, I noticed that I was scanning
+for particular words in the subject and content of a mail.  In other words, I
+was reading each word of a mail and giving it a certain probability of being
+junk or good. The overall impression then yields a quick decision for a basket.</p>
+
+<p>In economics, we teach a nice Theorem that formalizes this approach, i.e.
+<a href="https://en.wikipedia.org/wiki/Bayes%27_theorem">Bayes&rsquo; Theorem</a>:</p>
+
+<p>$$P(A|B) = \frac{P(B|A) P(A)}{P(B)}$$</p>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
+</script>
+<script type="text/javascript" async
+  src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS_CHTML">
+</script>
+
+<p>In plain English, this theorem tells us that the probability that a mail is
+junk, given its content, is equal the probability that its content appears in
+the junk basket, weighted by the chance to fall into either basket
+&ldquo;accidentally&rdquo; (without any pre-conditions).</p>
+
+<h2 id="learn-every-mail-you-get">Learn every (!!!) mail you get</h2>
+
+<p>Bayes&rsquo; Theorem has previously been used in junk mail filters, for example by
+the legendary <a href="https://en.wikipedia.org/wiki/POPFile">POPFile</a> and many others.
+However, all these previous junk filters learn only from their errors and never
+from correctly classified mails. This is a waste of information!</p>
+
+<p>For example, if the filter classified a mail as good because 30% of the words
+had an extremely high probability of landing in the good basket, traditional
+junk filters would not take the opportunity to learn the remaining 70% of the
+words as being likely good as well.</p>
+
+<p>With <a href="https://github.com/carlostrub/sisyphus">Sisyphus</a> however, I developed a
+junk filter that is capable of really learning all the content of all mails,
+all the time.</p>
+
+<h2 id="how-to-store-50000-unique-mails-in-10mb">How to store 50000 unique mails in 10MB?</h2>
+
+<p>The major challenge was storing the content of thousands of unique mails in an
+efficient way. Interestingly, Bayes&rsquo; Theorem helps a lot here as all the
+necessary ingredients (probabilities) can be derived from a combination of
+counters on words.</p>
+
+<p>Second, even though I wanted Sisyphus to be as good as possible, I was willing
+to give up some of the precision for speed and a very small footprint.</p>
+
+<p>Another very nice idea came to help: the <a href="https://en.wikipedia.org/wiki/HyperLogLog">HyperLogLog
+Algorithm</a> developed by <a href="https://en.wikipedia.org/wiki/Philippe_Flajolet">Philippe
+Flajolet</a> and many others.
+This algorithm essentially allows to count all words in all mails in a very
+efficient way, allowing Sisyphus to store roughly 100000 word counters from
+50000 unique mails in 10MB.</p>
+
+<p>Note that this algorithm sometimes produces slightly wrong counting numbers. I
+am willing to accept those errors, as they typically will not alter the
+probabilities of a mail classification.</p>
+
+<h2 id="who-classifies-mails">Who classifies mails?</h2>
+
+<p>As tastes are individual, there is no way to circumvent the human owner of a
+mailbox. However, I wanted to make Sisyphus not only easy to setup but also
+invisible to the users.</p>
+
+<p>This is achieved by running directly on the users&rsquo; Maildir directories on the
+server. Sisyphus reads arriving mails in the &ldquo;new&rdquo; directory, then calculates
+the probabilities and physically moves the file to the junk directory, if
+classified as such. Otherwise, it does not touch any mails at all.</p>
+
+<p>If a user moves a mail from good to junk or vice versa, Sisyphus will learn
+about that in the next learning cycle and become more and more accurate over
+time.</p>
+
+<h2 id="known-issues">Known issues</h2>
+
+<p>It would not be just to only mention the positive aspects of Sisyphus without
+mentioning some known issues.</p>
+
+<p>First of all, it is not so easy to compute nice statistics of its successes or
+failures. Sisyphus is totally agnostic about whether it has already learned a
+mail because the HyperLogLog algorithm takes care of duplicates. And we are not
+really keeping track of wrongly classified mails, just to produce some nice
+statistics.</p>
+
+<p>Second, related to the first issue, if the user is not &ldquo;correcting&rdquo; errors fast
+enough (faster than the configured learning cycle), i.e. if the user is not
+moving wrongly classified mails into the other folder in time, Sisyphus is
+learning a mail eventually for the good and the junk basket, respectively. This
+does not have any adverse effect on the quality, but slows down speed of
+learning. Proper tuning of the configuration helps mitigate this issue
+effectively.</p>
+
+<h2 id="where-to-get-sisyphus">Where to get Sisyphus?</h2>
+
+<p>Download pre-compiled binaries or the source code from
+<a href="https://github.com/carlostrub/sisyphus/releases">Github</a>. Any comments,
+issues, or patches are very welcome.</p>
+
+<div id="disqus_thread"></div>
+<script>
+
+var disqus_config = function () {
+this.page.url = "https://carlostrub.ch/code/security/sisyphus/";
+this.page.identifier = "44520c4dc073fb440211d14401ffed46";
+};
+
+(function() {
+var d = document, s = d.createElement('script');
+s.src = '//carlostrub-ch.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+
+</main>
+    <footer>
+  <hr>
+  <p>
+  Published
+
+    by Carlo Strub
+
+  on <time datetime="2017-12-30T15:09:06&#43;02:00">30 Dec, 2017</time>
+
+    in <a href="/categories/mail/">mail</a> and <a href="/categories/security/">security</a>
+
+
+    and tagged <a href="/tags/go/">go</a>, <a href="/tags/mail/">mail</a> and <a href="/tags/security/">security</a>
+
+  using 865 words
+  for a 5 minute read.
+</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<aside>
+  Related posts:
+  <ul>
+
+
+
+
+
+
+
+
+
+
+        <li><a href="https://carlostrub.ch/code/security/geli/">Harddisk Encryption with Geli</a> &ndash; 4 minute read
+
+
+
+
+
+
+
+
+
+        <li><a href="https://carlostrub.ch/code/cloud/bapu/">Bapu</a> &ndash; 1 minute read
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        <li><a href="https://carlostrub.ch/code/security/checksum-dvd/">Checksum a DVD</a> &ndash; 1 minute read
+
+
+
+
+
+        <li><a href="https://carlostrub.ch/code/security/ssh/">Poor Man&#39;s SSH</a> &ndash; 1 minute read
+
+
+
+
+
+
+
+
+
+
+
+
+
+        <li><a href="https://carlostrub.ch/code/security/auditing/">Auditing</a> &ndash; 1 minute read
+
+
+
+
+
+        <li><a href="https://carlostrub.ch/code/security/hardening/">Hardening FreeBSD</a> &ndash; 1 minute read
+
+
+
+
+
+        <li><a href="https://carlostrub.ch/code/security/tor/">Secure Communication via Tor</a> &ndash; 1 minute read
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </ul>
+</aside>
+
+
+
+  <p class="powered-by">
+    This page was generated by <a href="https://gohugo.io/">Hugo</a> and runs
+    on <a href="https://www.freebsd.org/">FreeBSD</a>.
+  </p>
+
+
+</footer>
+
+
+    <script type="text/javascript">
+var clicky_site_ids = clicky_site_ids || [];
+clicky_site_ids.push("101021451");
+(function() {
+  var s = document.createElement('script');
+  s.type = 'text/javascript';
+  s.async = true;
+  s.src = '//static.getclicky.com/js';
+  ( document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0] ).appendChild( s );
+})();
+</script>
+<noscript><p><img alt="Clicky" width="1" height="1" src="//in.getclicky.com/101021451ns.gif" /></p></noscript>
+
+
+  </body>
+</html>

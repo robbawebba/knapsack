@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en-GB" prefix="og: http://ogp.me/ns#">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width" />
+<link rel="profile" href="http://gmpg.org/xfn/11">
+<link rel="pingback" href="https://alediaferia.com/xmlrpc.php">
+<title>Autocomplete engine in Go: let&#039;s build it - A dev&#039;s Main Thread</title>
+
+<!-- This site is optimized with the Yoast SEO plugin v6.1.1 - https://yoa.st/1yg?utm_content=6.1.1 -->
+<meta name="description" content="Writing an autocomplete engine in Go is straightforward. We&#039;re gonna go through this exercise together and explore a simple implementation of it."/>
+<link rel="canonical" href="https://alediaferia.com/2018/01/06/autocomplete-engine-go/" />
+<meta property="og:locale" content="en_GB" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Autocomplete engine in Go: let&#039;s build it - A dev&#039;s Main Thread" />
+<meta property="og:description" content="Writing an autocomplete engine in Go is straightforward. We&#039;re gonna go through this exercise together and explore a simple implementation of it." />
+<meta property="og:url" content="https://alediaferia.com/2018/01/06/autocomplete-engine-go/" />
+<meta property="og:site_name" content="A dev&#039;s Main Thread" />
+<meta property="article:publisher" content="https://facebook.com/alediaferia" />
+<meta property="article:tag" content="algorithm" />
+<meta property="article:tag" content="autocomplete" />
+<meta property="article:tag" content="autocompletion" />
+<meta property="article:tag" content="go" />
+<meta property="article:tag" content="golang" />
+<meta property="article:tag" content="prefix" />
+<meta property="article:tag" content="prefixmap" />
+<meta property="article:tag" content="radix" />
+<meta property="article:tag" content="string" />
+<meta property="article:tag" content="trie" />
+<meta property="article:tag" content="typeahead" />
+<meta property="article:section" content="Programming" />
+<meta property="article:published_time" content="2018-01-06T14:34:27+00:00" />
+<meta property="article:modified_time" content="2018-01-06T14:41:33+00:00" />
+<meta property="og:updated_time" content="2018-01-06T14:41:33+00:00" />
+<meta property="og:image" content="https://alediaferia.com/wp-content/uploads/2018/01/Screenshot-from-2018-01-06-13-37-18.png" />
+<meta property="og:image:secure_url" content="https://alediaferia.com/wp-content/uploads/2018/01/Screenshot-from-2018-01-06-13-37-18.png" />
+<meta property="og:image:width" content="1767" />
+<meta property="og:image:height" content="597" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:description" content="Writing an autocomplete engine in Go is straightforward. We&#039;re gonna go through this exercise together and explore a simple implementation of it." />
+<meta name="twitter:title" content="Autocomplete engine in Go: let&#039;s build it - A dev&#039;s Main Thread" />
+<meta name="twitter:site" content="@alediaferia" />
+<meta name="twitter:image" content="https://i0.wp.com/alediaferia.com/wp-content/uploads/2018/01/Screenshot-from-2018-01-06-13-37-18.png?fit=1767%2C597&#038;ssl=1" />
+<meta name="twitter:creator" content="@alediaferia" />
+<script type='application/ld+json'>{"@context":"http:\/\/schema.org","@type":"WebSite","@id":"#website","url":"https:\/\/alediaferia.com\/","name":"A dev's Main Thread","potentialAction":{"@type":"SearchAction","target":"https:\/\/alediaferia.com\/?s={search_term_string}","query-input":"required name=search_term_string"}}</script>
+<script type='application/ld+json'>{"@context":"http:\/\/schema.org","@type":"Person","url":"https:\/\/alediaferia.com\/2018\/01\/06\/autocomplete-engine-go\/","sameAs":["https:\/\/facebook.com\/alediaferia","https:\/\/www.linkedin.com\/in\/alediaferia","https:\/\/twitter.com\/alediaferia"],"@id":"#person","name":"Alessandro Diaferia"}</script>
+<!-- / Yoast SEO plugin. -->
+
+<link rel='dns-prefetch' href='//s0.wp.com' />
+<link rel='dns-prefetch' href='//secure.gravatar.com' />
+<link rel='dns-prefetch' href='//s.w.org' />
+<link rel="alternate" type="application/rss+xml" title="A dev&#039;s Main Thread &raquo; Feed" href="https://alediaferia.com/feed/" />
+<link rel="alternate" type="application/rss+xml" title="A dev&#039;s Main Thread &raquo; Comments Feed" href="https://alediaferia.com/comments/feed/" />
+<link rel="alternate" type="application/rss+xml" title="A dev&#039;s Main Thread &raquo; Autocomplete engine in Go: let&#8217;s build it Comments Feed" href="https://alediaferia.com/2018/01/06/autocomplete-engine-go/feed/" />
+		<script type="text/javascript">
+			window._wpemojiSettings = {"baseUrl":"https:\/\/s.w.org\/images\/core\/emoji\/2.3\/72x72\/","ext":".png","svgUrl":"https:\/\/s.w.org\/images\/core\/emoji\/2.3\/svg\/","svgExt":".svg","source":{"concatemoji":"https:\/\/alediaferia.com\/wp-includes\/js\/wp-emoji-release.min.js?ver=4.9.2"}};
+			!function(a,b,c){function d(a,b){var c=String.fromCharCode;l.clearRect(0,0,k.width,k.height),l.fillText(c.apply(this,a),0,0);var d=k.toDataURL();l.clearRect(0,0,k.width,k.height),l.fillText(c.apply(this,b),0,0);var e=k.toDataURL();return d===e}function e(a){var b;if(!l||!l.fillText)return!1;switch(l.textBaseline="top",l.font="600 32px Arial",a){case"flag":return!(b=d([55356,56826,55356,56819],[55356,56826,8203,55356,56819]))&&(b=d([55356,57332,56128,56423,56128,56418,56128,56421,56128,56430,56128,56423,56128,56447],[55356,57332,8203,56128,56423,8203,56128,56418,8203,56128,56421,8203,56128,56430,8203,56128,56423,8203,56128,56447]),!b);case"emoji":return b=d([55358,56794,8205,9794,65039],[55358,56794,8203,9794,65039]),!b}return!1}function f(a){var c=b.createElement("script");c.src=a,c.defer=c.type="text/javascript",b.getElementsByTagName("head")[0].appendChild(c)}var g,h,i,j,k=b.createElement("canvas"),l=k.getContext&&k.getContext("2d");for(j=Array("flag","emoji"),c.supports={everything:!0,everythingExceptFlag:!0},i=0;i<j.length;i++)c.supports[j[i]]=e(j[i]),c.supports.everything=c.supports.everything&&c.supports[j[i]],"flag"!==j[i]&&(c.supports.everythingExceptFlag=c.supports.everythingExceptFlag&&c.supports[j[i]]);c.supports.everythingExceptFlag=c.supports.everythingExceptFlag&&!c.supports.flag,c.DOMReady=!1,c.readyCallback=function(){c.DOMReady=!0},c.supports.everything||(h=function(){c.readyCallback()},b.addEventListener?(b.addEventListener("DOMContentLoaded",h,!1),a.addEventListener("load",h,!1)):(a.attachEvent("onload",h),b.attachEvent("onreadystatechange",function(){"complete"===b.readyState&&c.readyCallback()})),g=c.source||{},g.concatemoji?f(g.concatemoji):g.wpemoji&&g.twemoji&&(f(g.twemoji),f(g.wpemoji)))}(window,document,window._wpemojiSettings);
+		</script>
+		<style type="text/css">
+img.wp-smiley,
+img.emoji {
+	display: inline !important;
+	border: none !important;
+	box-shadow: none !important;
+	height: 1em !important;
+	width: 1em !important;
+	margin: 0 .07em !important;
+	vertical-align: -0.1em !important;
+	background: none !important;
+	padding: 0 !important;
+}
+</style>
+<link rel='stylesheet' id='crayon-css'  href='https://alediaferia.com/wp-content/plugins/crayon-syntax-highlighter/css/min/crayon.min.css?ver=_2.7.2_beta' type='text/css' media='all' />
+<link rel='stylesheet' id='crayon-theme-github-css'  href='https://alediaferia.com/wp-content/plugins/crayon-syntax-highlighter/themes/github/github.css?ver=_2.7.2_beta' type='text/css' media='all' />
+<link rel='stylesheet' id='crayon-font-consolas-css'  href='https://alediaferia.com/wp-content/plugins/crayon-syntax-highlighter/fonts/consolas.css?ver=_2.7.2_beta' type='text/css' media='all' />
+<link rel='stylesheet' id='start-style-css'  href='https://alediaferia.com/wp-content/themes/start/style.css?ver=4.9.2' type='text/css' media='all' />
+<link rel='stylesheet' id='kirki-styles-start-css'  href='https://alediaferia.com/wp-content/themes/start/inc/customizer/kirki/assets/css/kirki-styles.css?ver=3.0.16' type='text/css' media='all' />
+<style id='kirki-styles-start-inline-css' type='text/css'>
+.container{width:1170px;}.start_blog .entry-meta span::after{content:"/";}body{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;font-size:17px;font-weight:400;font-style:normal;line-height:1.5;background-color:#ffffff;color:#3a3a3a;}h1,h2,h3,h4,h5,h6{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;font-weight:400;font-style:normal;}.site-title a{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;font-size:45px;font-weight:700;font-style:normal;line-height:1.5;text-transform:none;}.site-description{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;font-size:14px;line-height:1.5;text-transform:none;color:#000000;}.startmenu > ul > li > a{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;font-size:16px;font-weight:400;font-style:normal;line-height:1.5;text-transform:none;background-color:transparent;color:#000000;}.startmenu ul ul li a{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;font-size:16px;font-weight:400;font-style:normal;line-height:1.5;text-transform:none;background-color:#d5d8dc;color:#000000;}h1{font-size:48px;line-height:1.5;text-transform:none;color:#000000;}h2{font-size:42px;line-height:1.5;text-transform:none;color:#000000;}h3{font-size:30px;line-height:1.5;text-transform:none;color:#000000;}h4{font-size:20px;line-height:1.5;text-transform:none;color:#000000;}h5{font-size:18px;line-height:1.5;text-transform:none;color:#000000;}h6{font-size:15px;line-height:1.5;text-transform:none;color:#000000;}.start_blog .entry-title{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;font-size:48px;font-weight:400;font-style:normal;letter-spacing:0px;line-height:1;text-transform:none;}.start_blog .entry-meta{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;font-size:16px;line-height:1;text-transform:none;}.start_blog .entry-content{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;font-size:17px;font-weight:400;font-style:normal;letter-spacing:0px;line-height:1.5;text-transform:none;color:#000000;}.start_blog .entry-content .read-more{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;font-size:16px;line-height:1.5;text-transform:none;background:#e5e8e8;color:#000000;}.posts-navigation .nav-links a, .post-navigation .nav-links a{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;font-size:16px;font-weight:400;font-style:normal;line-height:1.5;text-transform:none;color:#1e73be;}#secondary .widget-title{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;font-size:30px;font-weight:400;font-style:normal;line-height:1.5;text-align:left;text-transform:none;color:#000000;}#secondary .widget{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;font-size:17px;font-weight:400;font-style:normal;line-height:1.5;text-align:left;text-transform:none;color:#3a3a3a;}.site-footer .widget-title{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;font-size:30px;font-weight:400;font-style:normal;line-height:1.5;text-align:left;text-transform:none;color:#000000;}.site-footer .widget{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;font-size:17px;font-weight:400;font-style:normal;line-height:1.5;text-align:left;text-transform:none;color:#3a3a3a;}.site-footer .site-info{font-size:17px;line-height:1.5;text-align:center;text-transform:none;color:#3a3a3a;}a, a:visited{color:#1e73be;}a:hover{color:#000000;}.site-header{background-color:#E5E8E8;}.site-header .site-title a{color:#000000;}.site-header .site-title a:hover{color:#000000;}.startmenu > ul > li:hover > a{background-color:#d5d8dc;color:#0088CC;}.startmenu > ul > li.current-menu-item a{background-color:#d5d8dc;color:#0088CC;}.startmenu > ul > li.has-sub > a:before, .startmenu ul ul li.has-sub > a:before, .startmenu > ul > li.has-sub > a:after, .startmenu ul ul li.has-sub > a:after{background-color:#000000;}.startmenu ul ul li:hover > a, .startmenu ul ul li a:hover{background-color:#c7ccd0;color:#0088CC;}.startmenu ul ul li.current-menu-item a{background-color:#c7ccd0;color:#0088CC;}.startmenu.small-screen #menu-button, .startmenu.small-screen .submenu-button{background-color:#000000;}.startmenu.small-screen #menu-button{color:#ffffff;}.startmenu.small-screen .submenu-button:before{background:#ffffff;}.startmenu.small-screen .submenu-button:after{background:#ffffff;}.startmenu.small-screen #menu-button:after{border-color:#ffffff;}.startmenu.small-screen #menu-button.menu-opened:before{background-color:#ffffff;}.startmenu.small-screen #menu-button.menu-opened:after{background-color:#ffffff;}.startmenu.small-screen .submenu-button.submenu-opened{background-color:#000000;}.startmenu.small-screen ul li{border-color:rgba(120, 120, 120, 0.2);}.start_blog .entry-title, .start_blog .entry-title a{color:#000000;}.start_blog .entry-title a:hover{color:#1e73be;}.start_blog .entry-meta, .entry-meta span::after{color:#94979c;}.start_blog .entry-meta a{color:#1e73be;}.start_blog .entry-meta a:hover{color:#000000;}.start_blog .entry-content .read-more:hover{background:#cfd7cf;color:#000000;}.posts-navigation .nav-links a:hover, .post-navigation .nav-links a:hover{color:#000000;}.site-footer .footer-area{background-color:#E5E8E8;}.site-info{background-color:#D5D8DC;}.site-header .header-left, .site-header .header-center, .site-header .header-right{padding-top:20px;padding-right:15px;padding-bottom:20px;padding-left:15px;}.site-content{padding-top:40px;padding-bottom:40px;}.blog_and_archive{padding-top:45px;padding-bottom:45px;}.right-sidebar, .left-sidebar{grid-column-gap:25px;}.site-footer .site-info .container{padding-top:20px;padding-right:15px;padding-bottom:20px;padding-left:15px;}
+</style>
+<link rel='stylesheet' id='jetpack_css-css'  href='https://alediaferia.com/wp-content/plugins/jetpack/css/jetpack.css?ver=5.7.1' type='text/css' media='all' />
+<script type='text/javascript' src='https://alediaferia.com/wp-includes/js/jquery/jquery.js?ver=1.12.4'></script>
+<script type='text/javascript' src='https://alediaferia.com/wp-includes/js/jquery/jquery-migrate.min.js?ver=1.4.1'></script>
+<script type='text/javascript'>
+/* <![CDATA[ */
+var CrayonSyntaxSettings = {"version":"_2.7.2_beta","is_admin":"0","ajaxurl":"https:\/\/alediaferia.com\/wp-admin\/admin-ajax.php","prefix":"crayon-","setting":"crayon-setting","selected":"crayon-setting-selected","changed":"crayon-setting-changed","special":"crayon-setting-special","orig_value":"data-orig-value","debug":""};
+var CrayonSyntaxStrings = {"copy":"Press %s to Copy, %s to Paste","minimize":"Click To Expand Code"};
+/* ]]> */
+</script>
+<script type='text/javascript' src='https://alediaferia.com/wp-content/plugins/crayon-syntax-highlighter/js/min/crayon.min.js?ver=_2.7.2_beta'></script>
+<link rel='https://api.w.org/' href='https://alediaferia.com/wp-json/' />
+<link rel="EditURI" type="application/rsd+xml" title="RSD" href="https://alediaferia.com/xmlrpc.php?rsd" />
+<link rel="wlwmanifest" type="application/wlwmanifest+xml" href="https://alediaferia.com/wp-includes/wlwmanifest.xml" />
+<meta name="generator" content="WordPress 4.9.2" />
+<link rel='shortlink' href='https://wp.me/p6qHlg-1f' />
+<link rel="alternate" type="application/json+oembed" href="https://alediaferia.com/wp-json/oembed/1.0/embed?url=https%3A%2F%2Falediaferia.com%2F2018%2F01%2F06%2Fautocomplete-engine-go%2F" />
+<link rel="alternate" type="text/xml+oembed" href="https://alediaferia.com/wp-json/oembed/1.0/embed?url=https%3A%2F%2Falediaferia.com%2F2018%2F01%2F06%2Fautocomplete-engine-go%2F&#038;format=xml" />
+
+<link rel='dns-prefetch' href='//v0.wordpress.com'/>
+<link rel='dns-prefetch' href='//i0.wp.com'/>
+<link rel='dns-prefetch' href='//i1.wp.com'/>
+<link rel='dns-prefetch' href='//i2.wp.com'/>
+<style type='text/css'>img#wpstats{display:none}</style>		<style type="text/css">.recentcomments a{display:inline !important;padding:0 !important;margin:0 !important;}</style>
+		<style type="text/css" id="syntaxhighlighteranchor"></style>
+</head>
+
+<body class="post-template-default single single-post postid-77 single-format-standard full-width">
+<div id="page" class="hfeed site">
+  <a class="skip-link screen-reader-text" href="#content">Skip to content</a>
+
+  <header id="masthead" class="site-header" role="banner">
+    <div class="container header-center">
+      <div class="site-branding">
+                  <p class="site-title"><a href="https://alediaferia.com/" rel="home">A dev&#039;s Main Thread</a></p>
+                  <p class="site-description">Random thoughts of a software engineer</p>
+
+      </div><!-- .site-branding -->
+
+      <nav id="site-navigation" class="main-navigation" role="navigation">
+        <div class="startmenu"><ul id="menu-blog" class="menu"><li id="menu-item-89" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-89"><a href="https://alediaferia.com/about/">About me</a></li>
+<li id="menu-item-90" class="menu-item menu-item-type-taxonomy menu-item-object-category current-post-ancestor current-menu-parent current-post-parent menu-item-90"><a href="https://alediaferia.com/category/programming/">Programming</a></li>
+</ul></div>      </nav><!-- #site-navigation -->
+    </div><!-- .container -->
+  </header><!-- #masthead -->
+
+  <div id="content" class="site-content container right-sidebar">
+
+
+
+	<div id="primary" class="content-area">
+		<main id="main" class="site-main" role="main">
+
+
+			 			 <article id="post-77" class="start_blog blog_single post-77 post type-post status-publish format-standard has-post-thumbnail hentry category-programming tag-algorithm tag-autocomplete tag-autocompletion tag-go tag-golang tag-prefix tag-prefixmap tag-radix tag-string tag-trie tag-typeahead">
+				<div class="post-image"><img width="1767" height="597" src="https://alediaferia.com/wp-content/uploads/2018/01/Screenshot-from-2018-01-06-13-37-18.png" class="attachment-post-thumbnail size-post-thumbnail wp-post-image" alt="Hilarious autocomplete" srcset="https://i0.wp.com/alediaferia.com/wp-content/uploads/2018/01/Screenshot-from-2018-01-06-13-37-18.png?w=1767&amp;ssl=1 1767w, https://i0.wp.com/alediaferia.com/wp-content/uploads/2018/01/Screenshot-from-2018-01-06-13-37-18.png?resize=300%2C101&amp;ssl=1 300w, https://i0.wp.com/alediaferia.com/wp-content/uploads/2018/01/Screenshot-from-2018-01-06-13-37-18.png?resize=768%2C259&amp;ssl=1 768w, https://i0.wp.com/alediaferia.com/wp-content/uploads/2018/01/Screenshot-from-2018-01-06-13-37-18.png?resize=1024%2C346&amp;ssl=1 1024w, https://i0.wp.com/alediaferia.com/wp-content/uploads/2018/01/Screenshot-from-2018-01-06-13-37-18.png?w=1280&amp;ssl=1 1280w" sizes="(max-width: 1767px) 100vw, 1767px" /></div>
+<h1 class="entry-title">Autocomplete engine in Go: let&#8217;s build it</h1>
+
+<div class="entry-meta">
+	<span class="author vcard">By <a class="url fn n" href="https://alediaferia.com/author/alediaferia/">alediaferia</a></span><span class="date">Posted on <a href="https://alediaferia.com/2018/01/06/autocomplete-engine-go/" rel="bookmark"><time class="entry-date published" datetime="2018-01-06T14:34:27+00:00">6th January 2018</time><time class="updated" datetime="2018-01-06T14:41:33+00:00">6th January 2018</time></a></span><span class="category">Cat <a href="https://alediaferia.com/category/programming/" rel="category tag">Programming</a></span><span class="comments-link"><a href="https://alediaferia.com/2018/01/06/autocomplete-engine-go/#comments">1 Comment</a></span></div>
+<div class="entry-content">
+<p>Some time ago I worked on a small autocomplete web service for fun and curiosity. Part of it consists pretty much of what I&#8217;m going to talk about in this post.</p>
+<p>We&#8217;re gonna build a small completion suggester in Go.</p>
+<p>A couple of assumptions I&#8217;ll have for this experiment are:</p>
+<ul>
+<li>we don&#8217;t care about sub-word matching</li>
+<li>we want a little typo tolerance</li>
+<li>we&#8217;ll do case-insensitive matching</li>
+</ul>
+<h2>The prefix-based map</h2>
+<p>We&#8217;re gonna take advantage of <a href="https://github.com/alediaferia/prefixmap">PrefixMap</a>, a small map implementation of mine that helps with prefix-based key matching. You may have seen this kind of map called Radix Tree, Trie or Prefix Tree as specified on <a href="https://en.wikipedia.org/wiki/Trie">Wikipedia</a>, but I couldn&#8217;t find a naming convention for this kind of tree in the Go land. Maybe you can suggest a better name in the comments.</p>
+<p>Anyway, the prefix-based map will be our main data source for suggestions. We&#8217;ll use it to store all the suggestions we want to match through our engine.</p>
+<h2>The Levenshtein distance</h2>
+<p>We&#8217;ll use the <a href="https://en.wikipedia.org/wiki/Levenshtein_distance">Levenshtein distance</a> as a metric to compute how far the typed in string is from the matches that we&#8217;ve found. In particular, we&#8217;ll define our own similarity metric as:</p>
+<pre class="brush: plain; title: ; notranslate" title="">
+        levenshtein(match,substr)
+1.0 - ---------------------------
+         max(|match|,|substr|)
+</pre>
+<p>Where <code>substr</code> is the typed in string and <code>match</code> is the candidate match we have found.</p>
+<p>A similarity of <code>1.0</code> means that <code>substr</code> and <code>match</code> are equal.</p>
+<h2>The problem</h2>
+<blockquote><p>We have a list of strings that the input will potentially match against. We want to find a few candidate matches that honor a certain similarity threshold we define.</p></blockquote>
+<p>This is a very simplified version of what happens when you start typing text into an auto-completion-enabled input field. Every time you type in, the string you&#8217;ve typed in so far gets evaluated against a data source to find the most relevant suggestions for you. And all of this has to happen pretty fast to be effective. You want your auto-completion service to be faster than the user who&#8217;s typing so that he can save time and select the suggestion rather than typing it all.</p>
+<p>For this particular reason, the implementation of the Prefix Map we&#8217;re gonna use will be able to efficiently find all the values for the given prefix. This will save us from having to populate a more traditional map with all possible prefixes for a given key in advance. Instead, thanks to the tree-like structure values will be stored into the map, we&#8217;ll be able to just traverse the values in the tree that share a common prefix.</p>
+<h2>An example solution</h2>
+<p>For this specific example, our data source is going to be a list of world countries. Our target users will have to select the right country so they will start typing it in and we&#8217;ll provide a few suggestions to save them typing.</p>
+<h3>The autocomplete code</h3>
+<p>First of all, let&#8217;s start from the low-hanging fruits.</p>
+<p>We&#8217;ve defined our concept of <em>similarity</em> so we&#8217;ll start by writing a function for it.<br />
+<script src="https://gist.github.com/alediaferia/df59e27501d9c55908752e7d64c5dadf.js"></script></p>
+<p>As you can see, the function accepts the <code>ld</code> parameter as one of the inputs. That&#8217;s the Levenshtein Distance computed between the words we want to know the similarity of.</p>
+<p><script src="https://gist.github.com/alediaferia/d4d5eb061da9aafab91603fc8e2aeed9.js"></script></p>
+<p>Now, let&#8217;s populate our PrefixMap with the country list we have. For the purpose of the exercise I&#8217;m gonna use the list of country names in English provided by this <a href="http://www.countries-list.info/Download-List">online service</a> that I&#8217;ve turned into a Go slice. You can find a gist for it <a href="https://gist.github.com/alediaferia/0ca95bd099a5236b6a5cd676b00b7984" target="_blank" rel="noopener">here</a>.</p>
+<p>Now that we have everything we need, let&#8217;s work on the main component of our little program: the matching code.</p><!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+
+		<div id="crayon-5a72c682a346b693164161" class="crayon-syntax crayon-theme-github crayon-font-consolas crayon-os-mac print-yes notranslate" data-settings=" no-popup minimize scroll-mouseover" style=" margin-top: 12px; margin-bottom: 12px; font-size: 13px !important; line-height: 15px !important;">
+
+			<div class="crayon-toolbar" data-settings=" mouseover overlay hide delay" style="font-size: 13px !important;height: 19.5px !important; line-height: 19.5px !important;"><span class="crayon-title"></span>
+			<div class="crayon-tools" style="font-size: 13px !important;height: 19.5px !important; line-height: 19.5px !important;"><div class="crayon-button crayon-nums-button" title="Toggle Line Numbers"><div class="crayon-button-icon"></div></div><div class="crayon-button crayon-plain-button" title="Toggle Plain Code"><div class="crayon-button-icon"></div></div><div class="crayon-button crayon-wrap-button" title="Toggle Line Wrap"><div class="crayon-button-icon"></div></div><div class="crayon-button crayon-expand-button" title="Expand Code"><div class="crayon-button-icon"></div></div><div class="crayon-button crayon-copy-button" title="Copy"><div class="crayon-button-icon"></div></div></div></div>
+			<div class="crayon-info" style="min-height: 18.2px !important; line-height: 18.2px !important;"></div>
+			<div class="crayon-plain-wrap"><textarea wrap="soft" class="crayon-plain print-no" data-settings="dblclick" readonly style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 13px !important; line-height: 15px !important;">
+...
+        values := datasource.GetByPrefix(strings.ToLower(input))
+	results := make([]*Match, 0, len(values))
+	for _, v := range values {
+		value := v.(string)
+		s := similarity(len(value), len(input), LevenshteinDistance(value, input))
+		if s &gt;= similarityInput {
+			m := &amp;Match{value, s}
+			results = append(results, m)
+		}
+	}
+
+	fmt.Printf("Result for target similarity: %.2f\n", similarityInput)
+	PrintMatches(results)
+...</textarea></div>
+			<div class="crayon-main" style="">
+				<table class="crayon-table">
+					<tr class="crayon-row">
+				<td class="crayon-nums " data-settings="show">
+					<div class="crayon-nums-content" style="font-size: 13px !important; line-height: 15px !important;"><div class="crayon-num" data-line="crayon-5a72c682a346b693164161-1">1</div><div class="crayon-num crayon-striped-num" data-line="crayon-5a72c682a346b693164161-2">2</div><div class="crayon-num" data-line="crayon-5a72c682a346b693164161-3">3</div><div class="crayon-num crayon-striped-num" data-line="crayon-5a72c682a346b693164161-4">4</div><div class="crayon-num" data-line="crayon-5a72c682a346b693164161-5">5</div><div class="crayon-num crayon-striped-num" data-line="crayon-5a72c682a346b693164161-6">6</div><div class="crayon-num" data-line="crayon-5a72c682a346b693164161-7">7</div><div class="crayon-num crayon-striped-num" data-line="crayon-5a72c682a346b693164161-8">8</div><div class="crayon-num" data-line="crayon-5a72c682a346b693164161-9">9</div><div class="crayon-num crayon-striped-num" data-line="crayon-5a72c682a346b693164161-10">10</div><div class="crayon-num" data-line="crayon-5a72c682a346b693164161-11">11</div><div class="crayon-num crayon-striped-num" data-line="crayon-5a72c682a346b693164161-12">12</div><div class="crayon-num" data-line="crayon-5a72c682a346b693164161-13">13</div><div class="crayon-num crayon-striped-num" data-line="crayon-5a72c682a346b693164161-14">14</div><div class="crayon-num" data-line="crayon-5a72c682a346b693164161-15">15</div></div>
+				</td>
+						<td class="crayon-code"><div class="crayon-pre" style="font-size: 13px !important; line-height: 15px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;"><div class="crayon-line" id="crayon-5a72c682a346b693164161-1"><span class="crayon-sy">.</span><span class="crayon-sy">.</span><span class="crayon-sy">.</span></div><div class="crayon-line crayon-striped-line" id="crayon-5a72c682a346b693164161-2"><span class="crayon-h">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span class="crayon-v">values</span><span class="crayon-h"> </span><span class="crayon-o">:</span><span class="crayon-o">=</span><span class="crayon-h"> </span><span class="crayon-v">datasource</span><span class="crayon-sy">.</span><span class="crayon-e">GetByPrefix</span><span class="crayon-sy">(</span><span class="crayon-v">strings</span><span class="crayon-sy">.</span><span class="crayon-e">ToLower</span><span class="crayon-sy">(</span><span class="crayon-v">input</span><span class="crayon-sy">)</span><span class="crayon-sy">)</span></div><div class="crayon-line" id="crayon-5a72c682a346b693164161-3"><span class="crayon-h">	</span><span class="crayon-v">results</span><span class="crayon-h"> </span><span class="crayon-o">:</span><span class="crayon-o">=</span><span class="crayon-h"> </span><span class="crayon-e">make</span><span class="crayon-sy">(</span><span class="crayon-sy">[</span><span class="crayon-sy">]</span><span class="crayon-o">*</span><span class="crayon-v">Match</span><span class="crayon-sy">,</span><span class="crayon-h"> </span><span class="crayon-cn">0</span><span class="crayon-sy">,</span><span class="crayon-h"> </span><span class="crayon-e">len</span><span class="crayon-sy">(</span><span class="crayon-v">values</span><span class="crayon-sy">)</span><span class="crayon-sy">)</span></div><div class="crayon-line crayon-striped-line" id="crayon-5a72c682a346b693164161-4"><span class="crayon-h">	</span><span class="crayon-st">for</span><span class="crayon-h"> </span><span class="crayon-v">_</span><span class="crayon-sy">,</span><span class="crayon-h"> </span><span class="crayon-v">v</span><span class="crayon-h"> </span><span class="crayon-o">:</span><span class="crayon-o">=</span><span class="crayon-h"> </span><span class="crayon-e">range</span><span class="crayon-h"> </span><span class="crayon-e">values</span><span class="crayon-h"> </span><span class="crayon-sy">{</span></div><div class="crayon-line" id="crayon-5a72c682a346b693164161-5"><span class="crayon-h">		</span><span class="crayon-v">value</span><span class="crayon-h"> </span><span class="crayon-o">:</span><span class="crayon-o">=</span><span class="crayon-h"> </span><span class="crayon-v">v</span><span class="crayon-sy">.</span><span class="crayon-sy">(</span><span class="crayon-t">string</span><span class="crayon-sy">)</span></div><div class="crayon-line crayon-striped-line" id="crayon-5a72c682a346b693164161-6"><span class="crayon-h">		</span><span class="crayon-v">s</span><span class="crayon-h"> </span><span class="crayon-o">:</span><span class="crayon-o">=</span><span class="crayon-h"> </span><span class="crayon-e">similarity</span><span class="crayon-sy">(</span><span class="crayon-e">len</span><span class="crayon-sy">(</span><span class="crayon-v">value</span><span class="crayon-sy">)</span><span class="crayon-sy">,</span><span class="crayon-h"> </span><span class="crayon-e">len</span><span class="crayon-sy">(</span><span class="crayon-v">input</span><span class="crayon-sy">)</span><span class="crayon-sy">,</span><span class="crayon-h"> </span><span class="crayon-e">LevenshteinDistance</span><span class="crayon-sy">(</span><span class="crayon-v">value</span><span class="crayon-sy">,</span><span class="crayon-h"> </span><span class="crayon-v">input</span><span class="crayon-sy">)</span><span class="crayon-sy">)</span></div><div class="crayon-line" id="crayon-5a72c682a346b693164161-7"><span class="crayon-h">		</span><span class="crayon-st">if</span><span class="crayon-h"> </span><span class="crayon-v">s</span><span class="crayon-h"> </span><span class="crayon-o">&gt;=</span><span class="crayon-h"> </span><span class="crayon-e">similarityInput</span><span class="crayon-h"> </span><span class="crayon-sy">{</span></div><div class="crayon-line crayon-striped-line" id="crayon-5a72c682a346b693164161-8"><span class="crayon-h">			</span><span class="crayon-v">m</span><span class="crayon-h"> </span><span class="crayon-o">:</span><span class="crayon-o">=</span><span class="crayon-h"> </span><span class="crayon-o">&amp;</span><span class="crayon-e">Match</span><span class="crayon-sy">{</span><span class="crayon-v">value</span><span class="crayon-sy">,</span><span class="crayon-h"> </span><span class="crayon-v">s</span><span class="crayon-sy">}</span></div><div class="crayon-line" id="crayon-5a72c682a346b693164161-9"><span class="crayon-h">			</span><span class="crayon-v">results</span><span class="crayon-h"> </span><span class="crayon-o">=</span><span class="crayon-h"> </span><span class="crayon-e">append</span><span class="crayon-sy">(</span><span class="crayon-v">results</span><span class="crayon-sy">,</span><span class="crayon-h"> </span><span class="crayon-v">m</span><span class="crayon-sy">)</span></div><div class="crayon-line crayon-striped-line" id="crayon-5a72c682a346b693164161-10"><span class="crayon-h">		</span><span class="crayon-sy">}</span></div><div class="crayon-line" id="crayon-5a72c682a346b693164161-11"><span class="crayon-h">	</span><span class="crayon-sy">}</span></div><div class="crayon-line crayon-striped-line" id="crayon-5a72c682a346b693164161-12">&nbsp;</div><div class="crayon-line" id="crayon-5a72c682a346b693164161-13"><span class="crayon-h">	</span><span class="crayon-v">fmt</span><span class="crayon-sy">.</span><span class="crayon-e">Printf</span><span class="crayon-sy">(</span><span class="crayon-s">"Result for target similarity: %.2f\n"</span><span class="crayon-sy">,</span><span class="crayon-h"> </span><span class="crayon-v">similarityInput</span><span class="crayon-sy">)</span></div><div class="crayon-line crayon-striped-line" id="crayon-5a72c682a346b693164161-14"><span class="crayon-h">	</span><span class="crayon-e">PrintMatches</span><span class="crayon-sy">(</span><span class="crayon-v">results</span><span class="crayon-sy">)</span></div><div class="crayon-line" id="crayon-5a72c682a346b693164161-15"><span class="crayon-sy">.</span><span class="crayon-sy">.</span><span class="crayon-sy">.</span></div></div></td>
+					</tr>
+				</table>
+			</div>
+		</div>
+<!-- [Format Time: 0.0024 seconds] -->
+<p>We&#8217;re taking advantage of the <a href="https://godoc.org/github.com/alediaferia/prefixmap#PrefixMap.GetByPrefix">GetByPrefix</a> method from PrefixMap. <code>GetByPrefix</code> will return a flattened collection of all the values in the map that belong to the specified prefix. Pretty handy, isn&#8217;t it?</p>
+<p>A further filtering I&#8217;m applying there, as you can see, is the similarity verification step. I&#8217;m going through the list of matches that we have retrieved to filter them according to the similarity input we have received as input in our program.</p>
+<p>You can find the full example implementation on <a href="https://github.com/alediaferia/blog-examples/tree/master/go-autocompleter-example">GitHub</a>.</p>
+<h3>The output</h3>
+<p>This is really it. Here&#8217;s a few example invocations of the little code we&#8217;ve just written:</p><!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+
+		<div id="crayon-5a72c682a347b233197621" class="crayon-syntax crayon-theme-github crayon-font-consolas crayon-os-mac print-yes notranslate" data-settings=" no-popup minimize scroll-mouseover" style=" margin-top: 12px; margin-bottom: 12px; font-size: 13px !important; line-height: 15px !important;">
+
+			<div class="crayon-plain-wrap"><textarea wrap="soft" class="crayon-plain print-no" data-settings="dblclick" readonly style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 13px !important; line-height: 15px !important;">
+$ go run autocompleter.go -similarity 0.3 itlaly
+
+Result for target similarity: 0.30
+match: 	Italy	similarity: 0.67</textarea></div>
+			<div class="crayon-main" style="">
+				<table class="crayon-table">
+					<tr class="crayon-row">
+				<td class="crayon-nums " data-settings="hide">
+					<div class="crayon-nums-content" style="font-size: 13px !important; line-height: 15px !important;"><div class="crayon-num" data-line="crayon-5a72c682a347b233197621-1">1</div><div class="crayon-num crayon-striped-num" data-line="crayon-5a72c682a347b233197621-2">2</div><div class="crayon-num" data-line="crayon-5a72c682a347b233197621-3">3</div><div class="crayon-num crayon-striped-num" data-line="crayon-5a72c682a347b233197621-4">4</div></div>
+				</td>
+						<td class="crayon-code"><div class="crayon-pre" style="font-size: 13px !important; line-height: 15px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;"><div class="crayon-line" id="crayon-5a72c682a347b233197621-1"><span class="crayon-sy">$</span><span class="crayon-h"> </span><span class="crayon-e">go </span><span class="crayon-e">run </span><span class="crayon-v">autocompleter</span><span class="crayon-e">.go</span><span class="crayon-h"> </span><span class="crayon-o">-</span><span class="crayon-i">similarity</span><span class="crayon-h"> </span><span class="crayon-cn">0.3</span><span class="crayon-h"> </span><span class="crayon-e">itlaly</span></div><div class="crayon-line crayon-striped-line" id="crayon-5a72c682a347b233197621-2">&nbsp;</div><div class="crayon-line" id="crayon-5a72c682a347b233197621-3"><span class="crayon-e">Result </span><span class="crayon-st">for</span><span class="crayon-h"> </span><span class="crayon-e">target </span><span class="crayon-v">similarity</span><span class="crayon-o">:</span><span class="crayon-h"> </span><span class="crayon-cn">0.30</span></div><div class="crayon-line crayon-striped-line" id="crayon-5a72c682a347b233197621-4"><span class="crayon-v">match</span><span class="crayon-o">:</span><span class="crayon-h"> 	</span><span class="crayon-e">Italy	</span><span class="crayon-v">similarity</span><span class="crayon-o">:</span><span class="crayon-h"> </span><span class="crayon-cn">0.67</span></div></div></td>
+					</tr>
+				</table>
+			</div>
+		</div>
+<!-- [Format Time: 0.0016 seconds] -->
+<p></p><!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+
+		<div id="crayon-5a72c682a347f775518886" class="crayon-syntax crayon-theme-github crayon-font-consolas crayon-os-mac print-yes notranslate" data-settings=" no-popup minimize scroll-mouseover" style=" margin-top: 12px; margin-bottom: 12px; font-size: 13px !important; line-height: 15px !important;">
+
+			<div class="crayon-plain-wrap"><textarea wrap="soft" class="crayon-plain print-no" data-settings="dblclick" readonly style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 13px !important; line-height: 15px !important;">
+$ go run autocompleter.go -similarity 0.2 united
+
+Result for target similarity: 0.20
+match: 	United Arab Emirates	similarity: 0.25
+match: 	United Kingdom	similarity: 0.36
+match: 	United States	similarity: 0.38</textarea></div>
+			<div class="crayon-main" style="">
+				<table class="crayon-table">
+					<tr class="crayon-row">
+				<td class="crayon-nums " data-settings="hide">
+					<div class="crayon-nums-content" style="font-size: 13px !important; line-height: 15px !important;"><div class="crayon-num" data-line="crayon-5a72c682a347f775518886-1">1</div><div class="crayon-num crayon-striped-num" data-line="crayon-5a72c682a347f775518886-2">2</div><div class="crayon-num" data-line="crayon-5a72c682a347f775518886-3">3</div><div class="crayon-num crayon-striped-num" data-line="crayon-5a72c682a347f775518886-4">4</div><div class="crayon-num" data-line="crayon-5a72c682a347f775518886-5">5</div><div class="crayon-num crayon-striped-num" data-line="crayon-5a72c682a347f775518886-6">6</div></div>
+				</td>
+						<td class="crayon-code"><div class="crayon-pre" style="font-size: 13px !important; line-height: 15px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;"><div class="crayon-line" id="crayon-5a72c682a347f775518886-1"><span class="crayon-sy">$</span><span class="crayon-h"> </span><span class="crayon-e">go </span><span class="crayon-e">run </span><span class="crayon-v">autocompleter</span><span class="crayon-e">.go</span><span class="crayon-h"> </span><span class="crayon-o">-</span><span class="crayon-i">similarity</span><span class="crayon-h"> </span><span class="crayon-cn">0.2</span><span class="crayon-h"> </span><span class="crayon-e">united</span></div><div class="crayon-line crayon-striped-line" id="crayon-5a72c682a347f775518886-2">&nbsp;</div><div class="crayon-line" id="crayon-5a72c682a347f775518886-3"><span class="crayon-e">Result </span><span class="crayon-st">for</span><span class="crayon-h"> </span><span class="crayon-e">target </span><span class="crayon-v">similarity</span><span class="crayon-o">:</span><span class="crayon-h"> </span><span class="crayon-cn">0.20</span></div><div class="crayon-line crayon-striped-line" id="crayon-5a72c682a347f775518886-4"><span class="crayon-v">match</span><span class="crayon-o">:</span><span class="crayon-h"> 	</span><span class="crayon-e">United </span><span class="crayon-e">Arab </span><span class="crayon-e">Emirates	</span><span class="crayon-v">similarity</span><span class="crayon-o">:</span><span class="crayon-h"> </span><span class="crayon-cn">0.25</span><span class="crayon-h">	</span></div><div class="crayon-line" id="crayon-5a72c682a347f775518886-5"><span class="crayon-v">match</span><span class="crayon-o">:</span><span class="crayon-h"> 	</span><span class="crayon-e">United </span><span class="crayon-e">Kingdom	</span><span class="crayon-v">similarity</span><span class="crayon-o">:</span><span class="crayon-h"> </span><span class="crayon-cn">0.36</span><span class="crayon-h">	</span></div><div class="crayon-line crayon-striped-line" id="crayon-5a72c682a347f775518886-6"><span class="crayon-v">match</span><span class="crayon-o">:</span><span class="crayon-h"> 	</span><span class="crayon-e">United </span><span class="crayon-e">States	</span><span class="crayon-v">similarity</span><span class="crayon-o">:</span><span class="crayon-h"> </span><span class="crayon-cn">0.38</span></div></div></td>
+					</tr>
+				</table>
+			</div>
+		</div>
+<!-- [Format Time: 0.0005 seconds] -->
+<p></p><!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+
+		<div id="crayon-5a72c682a3481169742693" class="crayon-syntax crayon-theme-github crayon-font-consolas crayon-os-mac print-yes notranslate" data-settings=" no-popup minimize scroll-mouseover" style=" margin-top: 12px; margin-bottom: 12px; font-size: 13px !important; line-height: 15px !important;">
+
+			<div class="crayon-plain-wrap"><textarea wrap="soft" class="crayon-plain print-no" data-settings="dblclick" readonly style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 13px !important; line-height: 15px !important;">
+$ go run autocompleter.go France
+
+Result for target similarity: 0.30
+match: 	France	similarity: 1.00
+match: 	Metropolitan France	similarity: 0.32	</textarea></div>
+			<div class="crayon-main" style="">
+				<table class="crayon-table">
+					<tr class="crayon-row">
+				<td class="crayon-nums " data-settings="hide">
+					<div class="crayon-nums-content" style="font-size: 13px !important; line-height: 15px !important;"><div class="crayon-num" data-line="crayon-5a72c682a3481169742693-1">1</div><div class="crayon-num crayon-striped-num" data-line="crayon-5a72c682a3481169742693-2">2</div><div class="crayon-num" data-line="crayon-5a72c682a3481169742693-3">3</div><div class="crayon-num crayon-striped-num" data-line="crayon-5a72c682a3481169742693-4">4</div><div class="crayon-num" data-line="crayon-5a72c682a3481169742693-5">5</div></div>
+				</td>
+						<td class="crayon-code"><div class="crayon-pre" style="font-size: 13px !important; line-height: 15px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;"><div class="crayon-line" id="crayon-5a72c682a3481169742693-1"><span class="crayon-sy">$</span><span class="crayon-h"> </span><span class="crayon-e">go </span><span class="crayon-e">run </span><span class="crayon-v">autocompleter</span><span class="crayon-e">.go</span><span class="crayon-h"> </span><span class="crayon-e">France</span></div><div class="crayon-line crayon-striped-line" id="crayon-5a72c682a3481169742693-2">&nbsp;</div><div class="crayon-line" id="crayon-5a72c682a3481169742693-3"><span class="crayon-e">Result </span><span class="crayon-st">for</span><span class="crayon-h"> </span><span class="crayon-e">target </span><span class="crayon-v">similarity</span><span class="crayon-o">:</span><span class="crayon-h"> </span><span class="crayon-cn">0.30</span></div><div class="crayon-line crayon-striped-line" id="crayon-5a72c682a3481169742693-4"><span class="crayon-v">match</span><span class="crayon-o">:</span><span class="crayon-h"> 	</span><span class="crayon-e">France	</span><span class="crayon-v">similarity</span><span class="crayon-o">:</span><span class="crayon-h"> </span><span class="crayon-cn">1.00</span><span class="crayon-h">	</span></div><div class="crayon-line" id="crayon-5a72c682a3481169742693-5"><span class="crayon-v">match</span><span class="crayon-o">:</span><span class="crayon-h"> 	</span><span class="crayon-e">Metropolitan </span><span class="crayon-e">France	</span><span class="crayon-v">similarity</span><span class="crayon-o">:</span><span class="crayon-h"> </span><span class="crayon-cn">0.32</span><span class="crayon-h">	</span></div></div></td>
+					</tr>
+				</table>
+			</div>
+		</div>
+<!-- [Format Time: 0.0004 seconds] -->
+<p>&nbsp;</p>
+<h2>Further improvements</h2>
+<p>As you have seen, our little program allows for little typos in some situations, except when it occurs at the beginning of our input. This is because we&#8217;re using a PrefixMap which will not match anything at all if we start with the wrong prefix, of course. An improvement in this sense would probably be to fall back to a full-text search when no matches have been found for the specified similarity in the first pass.</p>
+<p>Hopefully this post has been somewhat useful for you, or at least entertaining. Let me know if you need any clarification or if you have to recommend a better approach to achieve this.</p>
+<hr>
+<p>
+  <em>
+  Also published on <a href="https://medium.com/@alediaferia/1f8e9beb1b9e">Medium</a>.  </em>
+</p>
+</div>
+
+			 </article>
+
+
+
+				<nav class="navigation post-navigation" role="navigation">
+		<h2 class="screen-reader-text">Post navigation</h2>
+		<div class="nav-links">
+			<div class="nav-previous"><a href="https://alediaferia.com/2015/07/04/gogoa-integrate-cocoa-go/" rel="prev">Previous</a></div>		</div><!-- .nav-links -->
+	</nav><!-- .navigation -->
+
+
+<div id="comments" class="comments-area">
+
+
+			<h3 class="comments-title">
+			One thought on &ldquo;<span>Autocomplete engine in Go: let&#8217;s build it</span>&rdquo;		</h3>
+
+
+		<ol class="comment-list">
+					</ol><!-- .comment-list -->
+
+
+
+
+		<div id="respond" class="comment-respond">
+		<h3 id="reply-title" class="comment-reply-title">Leave a Reply <small><a rel="nofollow" id="cancel-comment-reply-link" href="/2018/01/06/autocomplete-engine-go/#respond" style="display:none;">Cancel reply</a></small></h3>			<form action="https://alediaferia.com/wp-comments-post.php" method="post" id="commentform" class="comment-form" novalidate>
+				<p class="comment-notes"><span id="email-notes">Your email address will not be published.</span> Required fields are marked <span class="required">*</span></p><p class="comment-form-author">
+			<input id="author" name="author" type="text" placeholder="Name" value="" size="30" aria-required='true' />
+		</p>
+<p class="comment-form-email">
+			<input id="email" name="email" type="email" placeholder="Email" value="" size="30" aria-required='true' />
+		</p>
+<p class="comment-form-url">
+			<input id="url" name="url" type="url"  placeholder="Website" value="" size="30" />
+			</p>
+<p class="comment-form-comment">
+            <textarea required id="comment" name="comment" placeholder="Enter comment here..." cols="45" rows="8" aria-required="true"></textarea>
+        </p><p class="form-submit"><input name="submit" type="submit" id="submit" class="submit" value="Post Comment" /> <input type='hidden' name='comment_post_ID' value='77' id='comment_post_ID' />
+<input type='hidden' name='comment_parent' id='comment_parent' value='0' />
+</p><p style="display: none;"><input type="hidden" id="akismet_comment_nonce" name="akismet_comment_nonce" value="0e85d3eb46" /></p><p class="comment-subscription-form"><input type="checkbox" name="subscribe_comments" id="subscribe_comments" value="subscribe" style="width: auto; -moz-appearance: checkbox; -webkit-appearance: checkbox;" /> <label class="subscribe-label" id="subscribe-label" for="subscribe_comments">Notify me of follow-up comments by email.</label></p><p class="comment-subscription-form"><input type="checkbox" name="subscribe_blog" id="subscribe_blog" value="subscribe" style="width: auto; -moz-appearance: checkbox; -webkit-appearance: checkbox;" /> <label class="subscribe-label" id="subscribe-blog-label" for="subscribe_blog">Notify me of new posts by email.</label></p><p style="display: none;"><input type="hidden" id="ak_js" name="ak_js" value="10"/></p>			</form>
+			</div><!-- #respond -->
+
+</div><!-- #comments -->
+
+
+		</main><!-- #main -->
+	</div><!-- #primary -->
+
+
+<div id="secondary" class="widget-area" role="complementary">
+	<aside id="search-2" class="widget widget_search"><form role="search" method="get" class="search-form" action="https://alediaferia.com/">
+				<label>
+					<span class="screen-reader-text">Search for:</span>
+					<input type="search" class="search-field" placeholder="Search &hellip;" value="" name="s" />
+				</label>
+				<input type="submit" class="search-submit" value="Search" />
+			</form></aside>		<aside id="recent-posts-2" class="widget widget_recent_entries">		<h3 class="widget-title">Recent Posts</h3>		<ul>
+											<li>
+					<a href="https://alediaferia.com/2018/01/06/autocomplete-engine-go/">Autocomplete engine in Go: let&#8217;s build it</a>
+									</li>
+											<li>
+					<a href="https://alediaferia.com/2015/07/04/gogoa-integrate-cocoa-go/">Gogoa – Cocoa bindings for Go</a>
+									</li>
+											<li>
+					<a href="https://alediaferia.com/2015/04/22/im-moving-part-1/">I&#8217;m moving [Part 1]</a>
+									</li>
+											<li>
+					<a href="https://alediaferia.com/2014/12/18/a-native-ios-app-with-a-qt-third-party-library/">A native iOS app with a Qt third-party library</a>
+									</li>
+											<li>
+					<a href="https://alediaferia.com/2014/11/09/workaround-windows-tray-area-item-preference/">Workaround Windows Tray Area Item Preference</a>
+									</li>
+					</ul>
+		</aside><aside id="recent-comments-2" class="widget widget_recent_comments"><h3 class="widget-title">Recent Comments</h3><ul id="recentcomments"><li class="recentcomments"><span class="comment-author-link"><a href='http://copypasteprogrammers.com/autocomplete-engine-in-go-lets-build-it-1f8e9beb1b9e/' rel='external nofollow' class='url'>Autocomplete engine in Go: let&#039;s build it | Copy Paste Programmers</a></span> on <a href="https://alediaferia.com/2018/01/06/autocomplete-engine-go/#comment-14">Autocomplete engine in Go: let&#8217;s build it</a></li><li class="recentcomments"><span class="comment-author-link"><a href='http://symboliclanguages.com' rel='external nofollow' class='url'>Jerry Walton</a></span> on <a href="https://alediaferia.com/2014/12/18/a-native-ios-app-with-a-qt-third-party-library/#comment-8">A native iOS app with a Qt third-party library</a></li><li class="recentcomments"><span class="comment-author-link">Karen</span> on <a href="https://alediaferia.com/2014/12/18/a-native-ios-app-with-a-qt-third-party-library/#comment-7">A native iOS app with a Qt third-party library</a></li><li class="recentcomments"><span class="comment-author-link">ttka</span> on <a href="https://alediaferia.com/2014/12/18/a-native-ios-app-with-a-qt-third-party-library/#comment-6">A native iOS app with a Qt third-party library</a></li><li class="recentcomments"><span class="comment-author-link">Parker</span> on <a href="https://alediaferia.com/2014/12/18/a-native-ios-app-with-a-qt-third-party-library/#comment-5">A native iOS app with a Qt third-party library</a></li></ul></aside><aside id="archives-2" class="widget widget_archive"><h3 class="widget-title">Archives</h3>		<ul>
+			<li><a href='https://alediaferia.com/2018/01/'>January 2018</a></li>
+	<li><a href='https://alediaferia.com/2015/07/'>July 2015</a></li>
+	<li><a href='https://alediaferia.com/2015/04/'>April 2015</a></li>
+	<li><a href='https://alediaferia.com/2014/12/'>December 2014</a></li>
+	<li><a href='https://alediaferia.com/2014/11/'>November 2014</a></li>
+	<li><a href='https://alediaferia.com/2014/10/'>October 2014</a></li>
+		</ul>
+		</aside><aside id="categories-2" class="widget widget_categories"><h3 class="widget-title">Categories</h3>		<ul>
+	<li class="cat-item cat-item-2"><a href="https://alediaferia.com/category/generic/" >Generic</a>
+</li>
+	<li class="cat-item cat-item-4"><a href="https://alediaferia.com/category/programming/" title="All about my programming experiences in this category">Programming</a>
+</li>
+	<li class="cat-item cat-item-5"><a href="https://alediaferia.com/category/real-life/" >Real life</a>
+</li>
+		</ul>
+</aside><aside id="meta-2" class="widget widget_meta"><h3 class="widget-title">Meta</h3>			<ul>
+						<li><a rel="nofollow" href="https://alediaferia.com/wp-login.php">Log in</a></li>
+			<li><a href="https://alediaferia.com/feed/">Entries <abbr title="Really Simple Syndication">RSS</abbr></a></li>
+			<li><a href="https://alediaferia.com/comments/feed/">Comments <abbr title="Really Simple Syndication">RSS</abbr></a></li>
+			<li><a href="https://wordpress.org/" title="Powered by WordPress, state-of-the-art semantic personal publishing platform.">WordPress.org</a></li>			</ul>
+			</aside></div><!-- #secondary -->
+
+
+
+	</div><!-- #content -->
+
+	<footer id="colophon" class="site-footer" role="contentinfo">
+
+				    <div class="footer-area">
+				<div class="container footer-no">
+
+
+				</div>
+			</div>
+
+
+			<div class="site-info">
+				<div class="container">
+				Copyright © 2017 Alessandro Diaferia | Powered by StartWP and DigitalOcean https://m.do.co/c/0136bc3054ff				</div>
+			</div><!-- .site-info -->
+
+	</footer><!-- #colophon -->
+</div><!-- #page -->
+
+	<div style="display:none">
+	</div>
+<script type='text/javascript' src='https://alediaferia.com/wp-content/plugins/syntaxhighlighter/syntaxhighlighter3/scripts/shCore.js?ver=3.0.9b'></script>
+<script type='text/javascript' src='https://alediaferia.com/wp-content/plugins/syntaxhighlighter/syntaxhighlighter3/scripts/shBrushPlain.js?ver=3.0.9b'></script>
+<script type='text/javascript'>
+	(function(){
+		var corecss = document.createElement('link');
+		var themecss = document.createElement('link');
+		var corecssurl = "https://alediaferia.com/wp-content/plugins/syntaxhighlighter/syntaxhighlighter3/styles/shCore.css?ver=3.0.9b";
+		if ( corecss.setAttribute ) {
+				corecss.setAttribute( "rel", "stylesheet" );
+				corecss.setAttribute( "type", "text/css" );
+				corecss.setAttribute( "href", corecssurl );
+		} else {
+				corecss.rel = "stylesheet";
+				corecss.href = corecssurl;
+		}
+		document.getElementsByTagName("head")[0].insertBefore( corecss, document.getElementById("syntaxhighlighteranchor") );
+		var themecssurl = "https://alediaferia.com/wp-content/plugins/syntaxhighlighter/syntaxhighlighter3/styles/shThemeDefault.css?ver=3.0.9b";
+		if ( themecss.setAttribute ) {
+				themecss.setAttribute( "rel", "stylesheet" );
+				themecss.setAttribute( "type", "text/css" );
+				themecss.setAttribute( "href", themecssurl );
+		} else {
+				themecss.rel = "stylesheet";
+				themecss.href = themecssurl;
+		}
+		//document.getElementById("syntaxhighlighteranchor").appendChild(themecss);
+		document.getElementsByTagName("head")[0].insertBefore( themecss, document.getElementById("syntaxhighlighteranchor") );
+	})();
+	SyntaxHighlighter.config.strings.expandSource = '+ expand source';
+	SyntaxHighlighter.config.strings.help = '?';
+	SyntaxHighlighter.config.strings.alert = 'SyntaxHighlighter\n\n';
+	SyntaxHighlighter.config.strings.noBrush = 'Can\'t find brush for: ';
+	SyntaxHighlighter.config.strings.brushNotHtmlScript = 'Brush wasn\'t configured for html-script option: ';
+	SyntaxHighlighter.defaults['gutter'] = false;
+	SyntaxHighlighter.defaults['pad-line-numbers'] = false;
+	SyntaxHighlighter.defaults['toolbar'] = false;
+	SyntaxHighlighter.all();
+</script>
+<script type='text/javascript' src='https://alediaferia.com/wp-content/plugins/jetpack/_inc/build/photon/photon.min.js?ver=20130122'></script>
+<script type='text/javascript' src='https://s0.wp.com/wp-content/js/devicepx-jetpack.js?ver=201805'></script>
+<script type='text/javascript' src='https://secure.gravatar.com/js/gprofiles.js?ver=2018Febaa'></script>
+<script type='text/javascript'>
+/* <![CDATA[ */
+var WPGroHo = {"my_hash":""};
+/* ]]> */
+</script>
+<script type='text/javascript' src='https://alediaferia.com/wp-content/plugins/jetpack/modules/wpgroho.js?ver=4.9.2'></script>
+<script type='text/javascript' src='https://alediaferia.com/wp-content/themes/start/js/navigation.js'></script>
+<script type='text/javascript' src='https://alediaferia.com/wp-content/themes/start/js/skip-link-focus-fix.js?ver=20130115'></script>
+<script type='text/javascript' src='https://alediaferia.com/wp-includes/js/comment-reply.min.js?ver=4.9.2'></script>
+<script type='text/javascript' src='https://alediaferia.com/wp-includes/js/wp-embed.min.js?ver=4.9.2'></script>
+<script async="async" type='text/javascript' src='https://alediaferia.com/wp-content/plugins/akismet/_inc/form.js?ver=4.0.2'></script>
+<script type='text/javascript' src='https://stats.wp.com/e-201805.js' async defer></script>
+<script type='text/javascript'>
+	_stq = window._stq || [];
+	_stq.push([ 'view', {v:'ext',j:'1:5.7.1',blog:'95021154',post:'77',tz:'0',srv:'alediaferia.com'} ]);
+	_stq.push([ 'clickTrackerInit', '95021154', '77' ]);
+</script>
+<!-- menu scipt -->
+<script>
+	jQuery(document).ready(function( $ ) {
+ 	$(".startmenu").menumaker({
+		title: "Menu",
+		breakpoint: 900,
+		format: "multitoggle"
+	});
+	});
+</script>
+</body>
+</html>
